@@ -24,12 +24,17 @@ section .text
     call read_line
     cmp ax, 0 ; - ax - bytes read. If 0 means EOF
     jz eof1
-    call print_buffer
+    call five_digit_numbers_in_line
+    add [number_count], ax
     jmp read_loop
     eof1:
-   
-   mov ah, 4Ch
-   int 21h
+    
+    ;; Total numbers
+    mov ax, [number_count]
+    call procPutInt16
+
+    mov ah, 4Ch
+    int 21h
 
 
 read_line:
@@ -95,6 +100,79 @@ print_buffer:
     pop ax
     ret
 
+five_digit_numbers_in_line:
+    ; returns result in ax
+    push bx
+    push cx
+    push dx
+
+    mov ax, 0 ; - number count
+    mov bx, 0 ; - index in buffer
+    mov cl, 1 ; - is number
+    mov ch, 0 ; - non-zero reached
+    mov dl, 0 ; - digit count
+    mov dh, 1 ; - current cell
+
+    mov bx, -1
+
+    buffer_loop:
+    inc bx
+    cmp byte [buffer+bx], 0x3B
+    jnz Mark2
+    inc dh
+    jmp Mark3
+    Mark2:
+    cmp byte [buffer+bx], 0x20
+    jnz Mark4
+    Mark3:
+    cmp cl, 0
+    jz Mark5
+    cmp dl, 5
+    jnz Mark5
+    inc ax
+    Mark5:
+    mov cl, 1
+    mov dl, 0
+    cmp dh, 2
+    jg return
+    jmp buffer_loop
+    Mark4:
+    cmp cl, 0
+    jz buffer_loop
+    cmp byte [buffer+bx], 0x31
+    jl Mark10
+    cmp byte [buffer+bx], 0x39
+    jg Mark10
+    inc dl
+    mov ch, 1
+    jmp buffer_loop
+    Mark10:
+    cmp byte [buffer+bx], 0x30
+    jnz Mark6
+    cmp ch, 0
+    jz buffer_loop
+    inc dl
+    jmp buffer_loop
+    Mark6:
+    cmp dl, 0
+    jnz Mark8
+    cmp byte [buffer + bx], 0x2B
+    jz Mark7
+    cmp byte [buffer + bx], 0x2D
+    jnz Mark8
+    Mark7:
+    jmp buffer_loop
+    Mark8:
+    mov cl, 0
+    jmp buffer_loop
+
+    return:
+    pop dx
+    pop cx
+    pop bx
+    ret
+
+
 %include 'yasmlib.asm'
 
 
@@ -103,13 +181,13 @@ section .data
         db 'failas.csv', 00
     output_filename:
         times 256 db 00
-    number_count:
-        db 00, 00
     debug:
         db 00, 00, crlf, '$'
     buffer:
         times 256 db 00, crlf, '$'
     cursor:
+        dw 0000
+    number_count:
         dw 0000
     
 section .bss
