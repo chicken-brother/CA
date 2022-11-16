@@ -19,50 +19,48 @@ section .text
     ; Open file
     mov dx, input_filename
     call procFOpenForReading
-    ; bx file descriptor
-    ; CF = 1, if error
-    
 
-    ;adc byte [debug_carry], 30h
-    ;mov dx, debug_carry
-    ;mov ah, 09 
-    ;int 0x21 
-
-    call print_carry
-
-
-    
     read_loop:
-    ; Įvestis: bx - failo deskriptorius, dx - buferis, cx - kiek baitų nuskaityti
-    mov bx, bx
+    call read_line
+    cmp ax, 0 ; - ax - bytes read. If 0 means EOF
+    jz eof1
+    call print_buffer
+    jmp read_loop
+    eof1:
+   
+   mov ah, 4Ch
+   int 21h
+
+
+read_line:
+    ; Input: bx - file descriptor, variable buffer 256 bytes reserved, variable cursor: dw storing offset from file orgin.
+    ; Output ax - how many bytes read. If 0 means EOF. Buffer is filled with string line. Newline is replaced with '$'. Cursor is changed to point to next line.
+    
+    push bx ; - File descriptor
+    
+    ; Read 256 bytes to the buffer
     mov dx, buffer
-    mov cx, 128
+    mov cx, 256
     mov ah, 0x3F
     int 0x21
 
+    ; If EOF, end
     cmp ax, 0
     jz eof
     
     ;find newline
+    mov bx, 0
     cr_loop:
-    inc word [index]
-    push bx
-    mov bx, buffer
-    add bx, [index]
-    sub bx, 1
-    cmp byte [bx], 0Ah
-    pop bx
+    inc bx
+    cmp byte [bx + buffer - 1], 0Ah
     jnz cr_loop
 
-    push ax
-    mov ax, [cursor]
-    add ax, [index]
-    mov [cursor], ax
-    call print_buffer
-    mov word [index], 0
-    pop ax
+
+    add [cursor], bx
+    mov byte [bx+buffer], '$'
 
     ; fseek to cursor (last newline)
+    pop bx
     push ax
     push bx
     push cx
@@ -76,66 +74,12 @@ section .text
     pop cx
     pop bx
     pop ax
-
-    ;push ax
-    ;mov ax, [cursor]
-    ;call procPutInt16
-    ;pop ax
-
+    push bx
     
-    
-    ; EOF = 0, if not EOF, jump
-    jmp read_loop
     eof:
-
-    
-
-    ;call print_carry
-    ;call print_ax
-    ;call print_buffer
-
-
-   ; Read line from file (skip)
-   ; Loop to read file line by line
-   ; and call the function
-   
-   mov ah, 4Ch
-   int 21h
-
-
-print_carry:
-    push ax
-    push bx
-    push cx
-    push dx
-    mov word [debug], 30h
-    adc word [debug], 0
-    mov dx, debug
-    mov ah, 09
-    int 0x21 
-    pop dx
-    pop cx
     pop bx
-    pop ax
     ret
 
-
-
-print_ax:
-    push ax
-    push bx
-    push cx
-    push dx
-    mov word [debug], ax
-    add word [debug], 30h
-    mov dx, debug
-    mov ah, 09
-    int 0x21 
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
 
 print_buffer:
     push ax
@@ -143,8 +87,6 @@ print_buffer:
     push cx
     push dx
     mov dx, buffer
-    mov bx, [index]
-    mov byte [bx+buffer], '$'
     mov ah, 09
     int 0x21 
     pop dx
@@ -169,10 +111,5 @@ section .data
         times 256 db 00, crlf, '$'
     cursor:
         dw 0000
-    index:
-        dw 0000
     
-
-
-
 section .bss
