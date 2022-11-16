@@ -9,13 +9,14 @@ section .text
 
     macPutString 'Antanas Vasiliauskas 1 kursas 3 grupe', crlf, '$'
 
-    mov bl, byte [0x80]
+    mov bl, byte [0x80] ;- command line argument length
     mov bh, 0
-    mov cx, bx
-    cmd_line_arg_loop:
-    mov [input_filename+]
+    mov byte [0x81+bx], 00 ;- remove 0D from command line argument
 
-    loop cmd_line_arg_loop
+    mov ax, 0
+    mov bx, 0
+    mov cx, 0
+
 
     macPutString 'Iveskite rezultatu failo pavadinima', crlf, '$'
 
@@ -25,7 +26,7 @@ section .text
     macNewLine
 
     ; Open file
-    mov dx, input_filename
+    mov dx, 0x82
     call procFOpenForReading
 
     read_loop:
@@ -88,6 +89,22 @@ print_ax:
     push cx
     push dx
     mov word [debug], ax
+    add word [debug], 30h
+    mov dx, debug
+    mov ah, 09
+    int 0x21 
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+print_bx:
+    push ax
+    push bx
+    push cx
+    push dx
+    mov word [debug], bx
     add word [debug], 30h
     mov dx, debug
     mov ah, 09
@@ -240,6 +257,7 @@ five_digit_numbers_in_line:
 
 section .data
     input_filename:
+        ;'failas.csv', 00
         times 256 db 00
     output_filename:
         times 256 db 00
