@@ -42,9 +42,11 @@ section .text
     
     ;; Total numbers
     mov ax, [number_count]
+    call procPutUInt16
     call print_ax
     mov dx, number_count_str
-    call procInt16ToStr
+    call procUInt16ToStr
+    call procPutStr
 
     ; Create file
     mov cx, 0
@@ -58,8 +60,17 @@ section .text
     call print_carry
 
     mov dx, number_count_str
-    mov cx, 8
+    push bx
+    mov bx, -1
+    number_of_bytes_loop:
+    inc bx
+    cmp byte [number_count_str+bx], 00
+    jnz number_of_bytes_loop
+    mov cx, bx
+    pop bx
     call procFWrite
+    call procPutStr
+    call print_carry
     call print_carry
 
     
