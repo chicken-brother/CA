@@ -8,8 +8,16 @@ section .text
     startas:
 
     macPutString 'Antanas Vasiliauskas 1 kursas 3 grupe', crlf, '$'
+
+    mov bl, byte [0x80]
+    mov bh, 0
+    mov cx, bx
+    cmd_line_arg_loop:
+    mov [input_filename+]
+
+    loop cmd_line_arg_loop
+
     macPutString 'Iveskite rezultatu failo pavadinima', crlf, '$'
-    macPutString 'Ivesk skaitomo failo varda', crlf, '$'
 
     mov al, 128
     mov dx, output_filename
@@ -23,19 +31,72 @@ section .text
     read_loop:
     call read_line
     cmp ax, 0 ; - ax - bytes read. If 0 means EOF
-    jz eof1
+    jz eof_global
     call five_digit_numbers_in_line
     add [number_count], ax
     jmp read_loop
-    eof1:
+    
+    eof_global:
+    call procFClose
     
     ;; Total numbers
     mov ax, [number_count]
-    call procPutInt16
+    call print_ax
+    mov dx, number_count_str
+    call procInt16ToStr
 
+    ; Create file
+    mov cx, 0
+    mov dx, output_filename
+    mov ah, 3Ch
+    int 0x21
+    call print_carry        
+
+    mov dx, output_filename
+    call procFOpenForWriting
+    call print_carry
+
+    mov dx, number_count_str
+    mov cx, 8
+    call procFWrite
+    call print_carry
+
+    
+    program_end:
     mov ah, 4Ch
     int 21h
 
+print_carry:
+    push ax
+    push bx
+    push cx
+    push dx
+    mov word [debug], 30h
+    adc word [debug], 0
+    mov dx, debug
+    mov ah, 09
+    int 0x21 
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+print_ax:
+    push ax
+    push bx
+    push cx
+    push dx
+    mov word [debug], ax
+    add word [debug], 30h
+    mov dx, debug
+    mov ah, 09
+    int 0x21 
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
 
 read_line:
     ; Input: bx - file descriptor, variable buffer 256 bytes reserved, variable cursor: dw storing offset from file orgin.
@@ -116,6 +177,7 @@ five_digit_numbers_in_line:
     mov bx, -1
 
     buffer_loop:
+    mov ch, 0
     inc bx
     cmp byte [buffer+bx], 0x3B
     jnz Mark2
@@ -178,7 +240,7 @@ five_digit_numbers_in_line:
 
 section .data
     input_filename:
-        db 'failas.csv', 00
+        times 256 db 00
     output_filename:
         times 256 db 00
     debug:
@@ -189,5 +251,7 @@ section .data
         dw 0000
     number_count:
         dw 0000
+    number_count_str:
+        times 16 db 00, crlf, '$'
     
 section .bss
