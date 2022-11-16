@@ -55,6 +55,7 @@ section .text
     mov ax, [cursor]
     add ax, [index]
     mov [cursor], ax
+    call print_buffer
     mov word [index], 0
     pop ax
 
@@ -73,12 +74,12 @@ section .text
     pop bx
     pop ax
 
-    push ax
-    mov ax, [cursor]
-    call procPutInt16
-    pop ax
+    ;push ax
+    ;mov ax, [cursor]
+    ;call procPutInt16
+    ;pop ax
 
-    call print_buffer
+    
     
     ; EOF = 0, if not EOF, jump
     cmp ax, 0
@@ -140,8 +141,8 @@ print_buffer:
     push cx
     push dx
     mov dx, buffer
-    mov bx, buffer
-    mov byte [bx+cursor], '$'
+    mov bx, [index]
+    mov byte [bx+buffer], '$'
     mov ah, 09
     int 0x21 
     pop dx
