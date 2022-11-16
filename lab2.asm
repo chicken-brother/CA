@@ -39,6 +39,9 @@ section .text
     mov cx, 128
     mov ah, 0x3F
     int 0x21
+
+    cmp ax, 0
+    jz eof
     
     ;find newline
     cr_loop:
@@ -82,9 +85,8 @@ section .text
     
     
     ; EOF = 0, if not EOF, jump
-    cmp ax, 0
-    jnz read_loop
-
+    jmp read_loop
+    eof:
 
     
 
