@@ -8,27 +8,31 @@ section .text
     startas:
 
     macPutString 'Antanas Vasiliauskas 1 kursas 3 grupe', crlf, '$'
-
     mov bl, byte [0x80] ;- command line argument length
     mov bh, 0
     mov byte [0x81+bx], 00 ;- remove 0D from command line argument
+    
 
+    ; Open file
+    mov dx, 0x82
+    call procFOpenForReading
     mov ax, 0
-    mov bx, 0
-    mov cx, 0
-
+    adc ax, 0
+    cmp ax, 0
+    jz opened_input
+    macPutString 'Nepavyko atidaryti duomenu failo', crlf, '$'
+    jmp program_end
+    opened_input:
 
     macPutString 'Iveskite rezultatu failo pavadinima', crlf, '$'
-
     mov al, 128
     mov dx, output_filename
     call procGetStr
     macNewLine
 
-    ; Open file
-    mov dx, 0x82
-    call procFOpenForReading
 
+    call read_line ; ignore first line
+    
     read_loop:
     call read_line
     cmp ax, 0 ; - ax - bytes read. If 0 means EOF
@@ -42,22 +46,18 @@ section .text
     
     ;; Total numbers
     mov ax, [number_count]
-    call procPutUInt16
-    call print_ax
     mov dx, number_count_str
     call procUInt16ToStr
-    call procPutStr
 
     ; Create file
     mov cx, 0
     mov dx, output_filename
     mov ah, 3Ch
-    int 0x21
-    call print_carry        
+    int 0x21    
 
     mov dx, output_filename
     call procFOpenForWriting
-    call print_carry
+
 
     mov dx, number_count_str
     push bx
@@ -69,62 +69,11 @@ section .text
     mov cx, bx
     pop bx
     call procFWrite
-    call procPutStr
-    call print_carry
-    call print_carry
+    call procFClose
 
-    
     program_end:
     mov ah, 4Ch
     int 21h
-
-print_carry:
-    push ax
-    push bx
-    push cx
-    push dx
-    mov word [debug], 30h
-    adc word [debug], 0
-    mov dx, debug
-    mov ah, 09
-    int 0x21 
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
-
-print_ax:
-    push ax
-    push bx
-    push cx
-    push dx
-    mov word [debug], ax
-    add word [debug], 30h
-    mov dx, debug
-    mov ah, 09
-    int 0x21 
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
-
-print_bx:
-    push ax
-    push bx
-    push cx
-    push dx
-    mov word [debug], bx
-    add word [debug], 30h
-    mov dx, debug
-    mov ah, 09
-    int 0x21 
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
 
 read_line:
     ; Input: bx - file descriptor, variable buffer 256 bytes reserved, variable cursor: dw storing offset from file orgin.
@@ -175,19 +124,6 @@ read_line:
     ret
 
 
-print_buffer:
-    push ax
-    push bx
-    push cx
-    push dx
-    mov dx, buffer
-    mov ah, 09
-    int 0x21 
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
 
 five_digit_numbers_in_line:
     ; returns result in ax
